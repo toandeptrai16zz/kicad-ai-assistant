@@ -3,6 +3,7 @@ import json
 import urllib.request
 import urllib.error
 import re
+import time
 import base64
 import base64
 
@@ -241,28 +242,41 @@ Cấu trúc yêu cầu:
             for k, v in extra_headers.items():
                 req.add_header(k, v)
                 
-        try:
-            with urllib.request.urlopen(req, timeout=45) as response:
-                response_body = response.read().decode('utf-8')
-                result_data = json.loads(response_body)
-                
-                # Extract text based on standard schemas
-                if 'candidates' in result_data: # Gemini
-                    text_response = result_data['candidates'][0]['content']['parts'][0]['text']
-                elif 'choices' in result_data: # OpenAI
-                    text_response = result_data['choices'][0]['message']['content']
-                else:
-                    return {"error": "Unknown API Response structure."}
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                # Increased timeout to 60s for heavy AI generation
+                with urllib.request.urlopen(req, timeout=60) as response:
+                    response_body = response.read().decode('utf-8')
+                    result_data = json.loads(response_body)
                     
-                return self._parse_json_response(text_response)
-                
-        except urllib.error.HTTPError as e:
-            error_msg = e.read().decode('utf-8')
-            return {"error": f"API HTTP Error {e.code}: {e.reason}\n{error_msg}"}
-        except urllib.error.URLError as e:
-            return {"error": f"API Network Error: {e.reason}"}
-        except Exception as e:
-            return {"error": f"Parse Error: {str(e)}"}
+                    # Extract text based on standard schemas
+                    if 'candidates' in result_data: # Gemini
+                        text_response = result_data['candidates'][0]['content']['parts'][0]['text']
+                    elif 'choices' in result_data: # OpenAI
+                        text_response = result_data['choices'][0]['message']['content']
+                    else:
+                        return {"error": "Unknown API Response structure."}
+                        
+                    return self._parse_json_response(text_response)
+                    
+            except urllib.error.HTTPError as e:
+                # Retry on 429 Too Many Requests, or 5xx Server Errors
+                if e.code in [429, 500, 502, 503, 504] and attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                error_msg = e.read().decode('utf-8')
+                return {"error": f"API HTTP Error {e.code}: {e.reason}\n{error_msg}"}
+            except Exception as e:
+                # Catch timeout, URLError, connection reset, etc.
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                return {"error": f"API Request Failed: {str(e)} (Đã thử lại {max_retries} lần nhưng vẫn thất bại)"}
 
     def _parse_json_response(self, text):
         match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
