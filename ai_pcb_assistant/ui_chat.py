@@ -254,28 +254,35 @@ class AIChatDialog(wx.Dialog):
         self.append_log("\n--- Đã áp dụng tự động thành công ---")
 
     def on_remove_attachment(self, event=None):
-        self.attached_pdf = None
-        self.attachment_panel.Hide()
-        self.Layout()
-        self.Refresh()
-        self.append_log("Đã gỡ bỏ file PDF đính kèm.")
+        try:
+            self.attached_pdf = None
+            self.attachment_panel.Hide()
+            self.attachment_panel.GetParent().Layout()
+            self.Refresh()
+            self.append_log("Đã gỡ bỏ file PDF đính kèm.")
+        except Exception as e:
+            self.append_log(f"Lỗi gỡ file: {str(e)}")
 
     def on_attach_pdf(self, event):
-        with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
-                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return
+        try:
+            with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
+                               style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+                if fileDialog.ShowModal() == wx.ID_CANCEL:
+                    return
 
-            self.attached_pdf = fileDialog.GetPath()
-            filename = os.path.basename(self.attached_pdf)
-            
-            self.lbl_attachment.SetLabel(f"📄 {filename}")
-            self.attachment_panel.Show()
-            self.Layout()
-            self.Refresh()
-            
-            self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần tương tác tiếp theo.")
-            
-            provider = self.ai_client.active_provider
-            if PROVIDERS.get(provider, {}).get("type") != "gemini":
-                self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
+                self.attached_pdf = fileDialog.GetPath()
+                filename = os.path.basename(self.attached_pdf)
+                
+                self.lbl_attachment.SetLabel(f"📄 {filename}")
+                self.attachment_panel.Show()
+                self.attachment_panel.Layout()
+                self.attachment_panel.GetParent().Layout()
+                self.Refresh()
+                
+                self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần tương tác tiếp theo.")
+                
+                provider = self.ai_client.active_provider
+                if PROVIDERS.get(provider, {}).get("type") != "gemini":
+                    self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
+        except Exception as e:
+            self.append_log(f"Lỗi hiển thị PDF: {str(e)}")
