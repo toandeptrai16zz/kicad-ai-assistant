@@ -169,16 +169,58 @@ class AIChatDialog(wx.Dialog):
             
         if "error" in result:
             self.append_log(f"\nLỗi từ AI: {result['error']}")
-            return
+        else:
+            beautiful_text = self._format_ai_response(result, mode)
+            self.append_log(f"\nAI: Phân tích {mode.upper()} hoàn tất.\n{'-'*40}\n{beautiful_text}")
+            self.append_log(f"\n{'-'*40}\n--- Hoàn tất ---")
             
         self.last_ai_result = result
-        self.append_log(f"\nAI: Phân tích {mode.upper()} hoàn tất. Kết quả:")
-        self.append_log(json.dumps(result, indent=2, ensure_ascii=False))
+
+    def _format_ai_response(self, result, mode):
+        """Format the JSON response into a beautiful human-readable string."""
+        lines = []
         
-        if mode == "pcb":
-            self.append_log("\nAI: Bạn có thể tự sửa lỗi, hoặc bấm 'Tự động áp dụng' để tôi sửa mạch thay bạn.")
-        
-        self.append_log("\n--- Hoàn tất ---")
+        if mode == "schematic":
+            if "analysis_summary" in result:
+                lines.append(f"📌 TÓM TẮT MẠCH:\n{result['analysis_summary']}\n")
+            if "schematic_warnings" in result and result["schematic_warnings"]:
+                lines.append("⚠️ CẢNH BÁO THIẾT KẾ:")
+                for warning in result["schematic_warnings"]:
+                    lines.append(f"  • {warning}")
+                    
+        elif mode == "pcb":
+            if "analysis_summary" in result:
+                lines.append(f"📌 ĐÁNH GIÁ TỔNG QUAN:\n{result['analysis_summary']}\n")
+            if "recommended_layers" in result:
+                lines.append(f"⚙️ SỐ LỚP KHUYẾN NGHỊ: {result['recommended_layers']} lớp")
+            if "track_width_vcc_mm" in result:
+                lines.append(f"📏 DÂY NGUỒN (Tối thiểu): {result['track_width_vcc_mm']} mm")
+            if "track_width_signal_mm" in result:
+                lines.append(f"📏 DÂY TÍN HIỆU (Tối thiểu): {result['track_width_signal_mm']} mm")
+            if "missing_bypass_caps" in result and result["missing_bypass_caps"]:
+                lines.append(f"⚠️ CẢNH BÁO: Có vẻ thiếu tụ Bypass (100nF) ở các IC sau: {', '.join(result['missing_bypass_caps'])}")
+                
+        elif mode == "selection":
+            if "selection_type" in result:
+                lines.append(f"🎯 ĐỐI TƯỢNG CHỌN: {result['selection_type']}\n")
+            if "explanation" in result:
+                lines.append(f"📖 CHỨC NĂNG:\n{result['explanation']}\n")
+            if "evaluation" in result:
+                lines.append(f"⚖️ ĐÁNH GIÁ KẾT NỐI:\n{result['evaluation']}\n")
+            if "recommendation" in result:
+                lines.append(f"💡 LỜI KHUYÊN:\n{result['recommendation']}")
+                
+        # Fallback if the JSON structure didn't match expected keys
+        if not lines:
+            for k, v in result.items():
+                if isinstance(v, list):
+                    lines.append(f"🔹 {str(k).upper()}:")
+                    for item in v:
+                        lines.append(f"  • {item}")
+                else:
+                    lines.append(f"🔹 {str(k).upper()}: {v}")
+                
+        return "\n".join(lines)
 
     def on_auto_apply(self, event):
         if not self.last_ai_result or self.last_analysis_mode != "pcb":

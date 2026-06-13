@@ -189,7 +189,7 @@ HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC B
                 req.add_header(k, v)
                 
         try:
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=45) as response:
                 response_body = response.read().decode('utf-8')
                 result_data = json.loads(response_body)
                 
