@@ -3,6 +3,8 @@ import json
 import urllib.request
 import urllib.error
 import re
+import base64
+import base64
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
 
@@ -134,16 +136,16 @@ HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC B
         self.config["active_provider"] = provider
         self._save_config(self.config)
 
-    def analyze_schematic(self, json_data):
-        return self._send_request(self.schematic_prompt, json_data)
+    def analyze_schematic(self, json_data, pdf_path=None):
+        return self._send_request(self.schematic_prompt, json_data, pdf_path)
         
-    def analyze_pcb(self, json_data):
-        return self._send_request(self.pcb_prompt, json_data)
+    def analyze_pcb(self, json_data, pdf_path=None):
+        return self._send_request(self.pcb_prompt, json_data, pdf_path)
         
-    def analyze_selection(self, json_data):
-        return self._send_request(self.interactive_prompt, json_data)
+    def analyze_selection(self, json_data, pdf_path=None):
+        return self._send_request(self.interactive_prompt, json_data, pdf_path)
 
-    def _send_request(self, system_prompt, data):
+    def _send_request(self, system_prompt, data, pdf_path=None):
         provider_info = PROVIDERS.get(self.active_provider)
         if not provider_info:
             return {"error": "Invalid AI Provider selected."}
@@ -152,14 +154,33 @@ HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC B
         if not api_key:
             return {"error": f"API Key for {self.active_provider} is not set. Please configure it."}
             
+        if pdf_path and provider_info["type"] != "gemini":
+            return {"error": f"Lỗi: Tính năng đọc Datasheet (PDF) hiện tại chỉ được hỗ trợ trên mạng Google Gemini. Vui lòng chọn Google Gemini hoặc gỡ file đính kèm."}
+
         if provider_info["type"] == "gemini":
-            return self._send_gemini(api_key, provider_info, system_prompt, data)
+            return self._send_gemini(api_key, provider_info, system_prompt, data, pdf_path)
         else:
             return self._send_openai_compatible(api_key, provider_info, system_prompt, data)
 
-    def _send_gemini(self, api_key, provider_info, system_prompt, data):
+    def _send_gemini(self, api_key, provider_info, system_prompt, data, pdf_path=None):
+        parts = [{"text": f"{system_prompt}\n\nDữ liệu:\n{data}"}]
+        
+        if pdf_path and os.path.exists(pdf_path):
+            try:
+                with open(pdf_path, "rb") as f:
+                    pdf_bytes = f.read()
+                pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                parts.append({
+                    "inlineData": {
+                        "mimeType": "application/pdf",
+                        "data": pdf_b64
+                    }
+                })
+            except Exception as e:
+                return {"error": f"Không thể đọc file PDF: {str(e)}"}
+
         payload = {
-            "contents": [{"parts": [{"text": f"{system_prompt}\n\nDữ liệu:\n{data}"}]}],
+            "contents": [{"parts": parts}],
             "generationConfig": {"temperature": 0.2}
         }
         url = f"{provider_info['url']}?key={api_key}"

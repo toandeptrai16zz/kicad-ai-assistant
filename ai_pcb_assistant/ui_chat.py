@@ -18,6 +18,7 @@ class AIChatDialog(wx.Dialog):
         self.extractor = BoardExtractor(self.board)
         self.last_ai_result = None
         self.last_analysis_mode = None
+        self.attached_pdf = None
         
         self.init_ui()
         self.CenterOnParent()
@@ -78,6 +79,10 @@ class AIChatDialog(wx.Dialog):
         btn_analyze_sel = wx.Button(panel, label="Hỏi mục đang chọn")
         btn_analyze_sel.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("selection"))
         hbox_actions.Add(btn_analyze_sel, flag=wx.RIGHT, border=5)
+        
+        self.btn_attach_pdf = wx.Button(panel, label="📎 Đính kèm PDF")
+        self.btn_attach_pdf.Bind(wx.EVT_BUTTON, self.on_attach_pdf)
+        hbox_actions.Add(self.btn_attach_pdf, flag=wx.RIGHT, border=5)
         
         btn_auto_apply = wx.Button(panel, label="Tự động áp dụng (Auto Fix)")
         btn_auto_apply.Bind(wx.EVT_BUTTON, self.on_auto_apply)
@@ -155,17 +160,20 @@ class AIChatDialog(wx.Dialog):
                 self.append_log(f"\nLỗi: Không có mục nào được chọn. Hãy click chuột chọn một linh kiện hoặc đường mạch trên màn hình KiCad rồi thử lại.")
                 return
             
+        if self.attached_pdf:
+            self.append_log(f"Đã đính kèm Datasheet: {os.path.basename(self.attached_pdf)}")
+            
         self.append_log(f"AI ({provider}): Đang phân tích... (Vui lòng đợi vài giây)")
         
-        threading.Thread(target=self._run_ai_analysis, args=(json_data, mode), daemon=True).start()
+        threading.Thread(target=self._run_ai_analysis, args=(json_data, mode, self.attached_pdf), daemon=True).start()
 
-    def _run_ai_analysis(self, json_data, mode):
+    def _run_ai_analysis(self, json_data, mode, pdf_path):
         if mode == "schematic":
-            result = self.ai_client.analyze_schematic(json_data)
+            result = self.ai_client.analyze_schematic(json_data, pdf_path)
         elif mode == "pcb":
-            result = self.ai_client.analyze_pcb(json_data)
+            result = self.ai_client.analyze_pcb(json_data, pdf_path)
         else:
-            result = self.ai_client.analyze_selection(json_data)
+            result = self.ai_client.analyze_selection(json_data, pdf_path)
             
         if "error" in result:
             self.append_log(f"\nLỗi từ AI: {result['error']}")
@@ -251,3 +259,24 @@ class AIChatDialog(wx.Dialog):
             
         wx.CallAfter(pcbnew.Refresh)
         self.append_log("\n--- Đã áp dụng tự động thành công ---")
+
+    def on_attach_pdf(self, event):
+        if self.attached_pdf:
+            # If already attached, remove it
+            self.attached_pdf = None
+            self.btn_attach_pdf.SetLabel("📎 Đính kèm PDF")
+            self.append_log("Đã gỡ bỏ file PDF đính kèm.")
+        else:
+            with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
+                               style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+                if fileDialog.ShowModal() == wx.ID_CANCEL:
+                    return     # User changed their mind
+
+                self.attached_pdf = fileDialog.GetPath()
+                filename = os.path.basename(self.attached_pdf)
+                self.btn_attach_pdf.SetLabel(f"❌ Gỡ bỏ PDF ({filename})")
+                self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần phân tích tiếp theo (Chỉ hỗ trợ Gemini).")
+                
+                provider = self.ai_client.active_provider
+                if PROVIDERS.get(provider, {}).get("type") != "gemini":
+                    self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
