@@ -1,0 +1,19 @@
+# KiCad files
+*.kicad_prl
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.bck
+*.kicad_pro-bak
+
+# Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Config and API Keys (CRITICAL FOR SECURITY)
+ai_pcb_assistant/config.json
+config.json
+
+# OS generated files
+.DS_Store
+Thumbs.db
