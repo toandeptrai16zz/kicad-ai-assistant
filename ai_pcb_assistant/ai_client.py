@@ -46,7 +46,8 @@ Nhiệm vụ của bạn:
    - Ưu/Nhược điểm của thiết kế hiện tại.
    - Việc cần làm (Gợi ý cách khắc phục cụ thể, ví dụ đổi điện trở thành 2.2k hoặc 4.7k).
    - Kết luận: Có bắt buộc phải làm hay không, hay chỉ là optional.
-4. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa các thông số kỹ thuật khô khan để hệ thống Auto-Fix chạy.
+4. QUAN TRỌNG: KHÔNG sử dụng định dạng toán học LaTeX (như $10k\\Omega$ hoặc $\\mu F$). Hãy viết đơn vị bằng văn bản thuần túy (VD: 10k ohm, 2.2uF, 10uF) để người dùng dễ đọc.
+5. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa các thông số kỹ thuật khô khan để hệ thống Auto-Fix chạy.
 
 Cấu trúc yêu cầu:
 (Phần chữ: Markdown giải thích tự do, có sử dụng emoji cho sinh động)
@@ -68,7 +69,8 @@ Nhiệm vụ của bạn:
    - Ưu/Nhược điểm hiện tại (Tại sao dây 0.25mm lại dễ cháy nếu chạy nguồn 2A).
    - Việc cần làm (Actionable Steps).
    - Kết luận (Bắt buộc phải sửa hay không).
-4. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa cấu hình thông số chuẩn để hệ thống tự động sửa mạch (Auto-Fix).
+4. QUAN TRỌNG: KHÔNG sử dụng định dạng toán học LaTeX (như $10k\\Omega$ hoặc $\\mu F$). Hãy viết đơn vị bằng văn bản thuần túy (VD: 10k ohm, 2.2uF, 10uF) để người dùng dễ đọc.
+5. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa cấu hình thông số chuẩn để hệ thống tự động sửa mạch (Auto-Fix).
 
 Cấu trúc yêu cầu:
 (Phần chữ: Markdown tự do giải thích siêu chi tiết, có emoji)
@@ -93,7 +95,8 @@ Nhiệm vụ của bạn:
    - Ưu/Nhược điểm của cách kết nối hiện tại (VD: Trở 10k thì tiết kiệm điện nhưng sườn xung chậm).
    - Hành động gợi ý.
    - Kết luận đánh giá chung.
-4. Ở DƯỚI CÙNG, bạn BẮT BUỘC đính kèm khối mã JSON rỗng (chỉ để hệ thống không bị lỗi parser).
+4. QUAN TRỌNG: KHÔNG sử dụng định dạng toán học LaTeX (như $10k\\Omega$ hoặc $\\mu F$). Hãy viết đơn vị bằng văn bản thuần túy (VD: 10k ohm, 2.2uF, 10uF) để người dùng dễ đọc.
+5. Ở DƯỚI CÙNG, bạn BẮT BUỘC đính kèm khối mã JSON rỗng (chỉ để hệ thống không bị lỗi parser).
 
 Cấu trúc yêu cầu:
 (Văn bản Markdown siêu chi tiết giải thích cho người dùng)
