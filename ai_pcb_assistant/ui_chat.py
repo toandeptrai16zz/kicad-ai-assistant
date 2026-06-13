@@ -194,6 +194,14 @@ class AIChatDialog(wx.Dialog):
                 return
         elif mode == "chat":
             json_data = {"user_question": custom_text}
+            
+            # Always inject schematic summary so AI knows what circuit we are talking about!
+            try:
+                sch_data = json.loads(self.extractor.to_json_schematic())
+                json_data["project_schematic_context"] = sch_data
+            except Exception:
+                pass
+                
             selection_data = self.extractor.to_json_selection()
             if isinstance(selection_data, str):
                 try:
