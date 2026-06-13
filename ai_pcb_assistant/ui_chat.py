@@ -2,6 +2,7 @@ import wx
 import pcbnew
 import json
 import threading
+import os
 
 from .extractor import BoardExtractor
 from .ai_client import AIClient, PROVIDERS
