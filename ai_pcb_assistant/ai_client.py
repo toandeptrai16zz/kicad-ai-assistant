@@ -37,62 +37,70 @@ class AIClient:
         self.active_provider = self.config.get("active_provider", "Google Gemini")
         
         self.schematic_prompt = """
-Bạn là một kỹ sư thiết kế nguyên lý (Schematic) giàu kinh nghiệm.
+Bạn là một Kỹ sư phần cứng kiêm Mentor chuyên review thiết kế mạch (Schematic) siêu cấp.
 Dưới đây là dữ liệu trích xuất từ sơ đồ nguyên lý KiCad (.kicad_sch).
 Nhiệm vụ của bạn:
-1. Đọc danh sách linh kiện.
-2. Phát hiện các bất thường cơ bản (ví dụ: thiếu điện trở kéo pull-up cho các chân giao tiếp như I2C nếu có thể suy luận, hoặc các giá trị tụ/trở không hợp lý nếu có).
-3. Cung cấp một nhận xét tổng quan ngắn gọn về độ phức tạp và chức năng dự kiến của mạch.
+1. Đọc và phân tích thật cặn kẽ danh sách linh kiện và các kết nối.
+2. Trình bày bài đánh giá dưới dạng văn bản Markdown chi tiết, rõ ràng, chia làm các mục như Tóm tắt, Nhận xét, Cảnh báo.
+3. VỚI MỖI LỖI HOẶC GỢI Ý TÌM THẤY, bạn BẮT BUỘC phải viết rõ 3 phần:
+   - Ưu/Nhược điểm của thiết kế hiện tại.
+   - Việc cần làm (Gợi ý cách khắc phục cụ thể, ví dụ đổi điện trở thành 2.2k hoặc 4.7k).
+   - Kết luận: Có bắt buộc phải làm hay không, hay chỉ là optional.
+4. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa các thông số kỹ thuật khô khan để hệ thống Auto-Fix chạy.
 
-HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC BÊN NGOÀI).
+Cấu trúc yêu cầu:
+(Phần chữ: Markdown giải thích tự do, có sử dụng emoji cho sinh động)
+
+```json
 {
-  "schematic_warnings": ["Cảnh báo 1", "Cảnh báo 2"],
-  "analysis_summary": "Nhận xét tổng quan mạch"
+  "analysis_summary": "Tóm tắt ngắn gọn 1-2 câu để log hệ thống."
 }
+```
 """
 
         self.pcb_prompt = """
-Bạn là một chuyên gia Layout PCB với nhiều năm kinh nghiệm. 
-Dưới đây là dữ liệu trích xuất từ dự án KiCad, bao gồm:
-- Thông tin thiết lập (số lớp đồng, độ rộng dây).
-- Danh sách footprint đang nằm trên PCB.
-- Thống kê đường dây (Tracks/Vias) theo từng Net.
-- Vùng đổ đồng (Zones) và Net của chúng.
-
+Bạn là một Kỹ sư Layout PCB lão làng. 
+Dưới đây là dữ liệu trích xuất từ dự án KiCad (số lớp, track width, danh sách component, via, zone).
 Nhiệm vụ của bạn:
-1. Đánh giá số lớp hiện tại và đề xuất số lớp tối ưu (`recommended_layers`).
-2. Đánh giá độ rộng đường mạch hiện tại của các Net nguồn (VCC/GND/5V/3V3...). Đề xuất độ rộng tối thiểu an toàn (`track_width_vcc_mm` và `track_width_signal_mm`).
-3. Kiểm tra xem các Net nguồn/GND đã được đổ đồng (Zones) chưa.
-4. Tìm các linh kiện (đặc biệt là IC) thiếu tụ bypass (decoupling capacitors 100nF) ở gần đó và liệt kê tham chiếu vào mảng `missing_bypass_caps`.
+1. Đánh giá số lớp hiện tại, độ rộng dây nguồn/tín hiệu, vùng đổ đồng, tụ bypass.
+2. Trình bày bài đánh giá dưới dạng văn bản Markdown chi tiết, dễ đọc.
+3. VỚI MỖI VẤN ĐỀ TÌM THẤY, BẮT BUỘC phân tích theo:
+   - Ưu/Nhược điểm hiện tại (Tại sao dây 0.25mm lại dễ cháy nếu chạy nguồn 2A).
+   - Việc cần làm (Actionable Steps).
+   - Kết luận (Bắt buộc phải sửa hay không).
+4. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC phải đính kèm một khối mã JSON (```json ... ```) chứa cấu hình thông số chuẩn để hệ thống tự động sửa mạch (Auto-Fix).
 
-HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC BÊN NGOÀI).
+Cấu trúc yêu cầu:
+(Phần chữ: Markdown tự do giải thích siêu chi tiết, có emoji)
+
+```json
 {
   "recommended_layers": 4,
   "track_width_vcc_mm": 0.5,
   "track_width_signal_mm": 0.25,
-  "missing_bypass_caps": ["U1", "U3"],
-  "analysis_summary": "Nhận xét về layout và đổ đồng."
+  "missing_bypass_caps": ["U1", "U3"]
 }
+```
 """
 
         self.interactive_prompt = """
-Bạn là một chuyên gia thiết kế phần cứng điện tử (Mentor).
-Người dùng vừa chọn (highlight) một hoặc vài đối tượng cụ thể trên bản vẽ PCB.
-Dưới đây là dữ liệu về các đối tượng được chọn (Linh kiện hoặc Đường mạch) cùng với thông tin tổng quan của Board.
-
+Bạn là một Chuyên gia phân tích linh kiện và mạch điện (Hardware Mentor).
+Người dùng vừa chọn (highlight) một đối tượng trên PCB hoặc Schematic. (Kèm theo thông tin Board bên dưới).
 Nhiệm vụ của bạn:
-1. Xác định rõ người dùng đang chọn cái gì (Ví dụ: Điện trở R1, IC U2, hoặc Đường mạch VCC).
-2. Nếu là Linh kiện: Giải thích chi tiết chức năng của linh kiện đó trong thực tế. Đánh giá xem các đường Net nối vào chân của nó đã hợp lý chưa (dựa trên tên Net như GND, VCC, SCL, SDA).
-3. Nếu là Đường mạch (Track): Đánh giá xem độ rộng (width) của đường mạch đó có phù hợp với tên Net không (VD: Net nguồn thì phải to, Net tín hiệu thì có thể nhỏ).
-4. Đưa ra lời khuyên hoặc cảnh báo nếu thấy điểm bất hợp lý.
+1. Phân tích chi tiết chức năng của linh kiện/đường dây đó.
+2. Trình bày dưới dạng văn bản Markdown rõ ràng.
+3. BẮT BUỘC phân tích:
+   - Ưu/Nhược điểm của cách kết nối hiện tại (VD: Trở 10k thì tiết kiệm điện nhưng sườn xung chậm).
+   - Hành động gợi ý.
+   - Kết luận đánh giá chung.
+4. Ở DƯỚI CÙNG, bạn BẮT BUỘC đính kèm khối mã JSON rỗng (chỉ để hệ thống không bị lỗi parser).
 
-HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC BÊN NGOÀI).
-{
-  "selection_type": "Component / Track / Mixed",
-  "explanation": "Giải thích chi tiết về đối tượng được chọn...",
-  "evaluation": "Đánh giá đúng/sai hoặc hợp lý/bất hợp lý...",
-  "recommendation": "Lời khuyên từ chuyên gia..."
-}
+Cấu trúc yêu cầu:
+(Văn bản Markdown siêu chi tiết giải thích cho người dùng)
+
+```json
+{}
+```
 """
 
     def _load_config(self):
@@ -234,12 +242,27 @@ HÃY TRẢ VỀ DUY NHẤT MỘT KHỐI JSON (KHÔNG CÓ VĂN BẢN NÀO KHÁC B
 
     def _parse_json_response(self, text):
         match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+        json_data = {}
+        markdown_text = text.strip()
+        
         if match:
             json_str = match.group(1)
+            # Remove the JSON block from the markdown output to keep it clean
+            markdown_text = text[:match.start()].strip() + "\n" + text[match.end():].strip()
+            try:
+                json_data = json.loads(json_str)
+            except json.JSONDecodeError:
+                pass
         else:
-            json_str = text.strip()
-            
-        try:
-            return json.loads(json_str)
-        except json.JSONDecodeError as e:
-            return {"error": f"Failed to parse JSON from AI response: {str(e)}\nRaw Response: {text}"}
+            # Fallback if AI returned raw JSON without code block
+            try:
+                if text.strip().startswith('{'):
+                    json_data = json.loads(text.strip())
+                    markdown_text = ""
+            except json.JSONDecodeError:
+                pass
+                
+        return {
+            "markdown": markdown_text.strip() if markdown_text.strip() else "(Phân tích hoàn tất nhưng không có nội dung văn bản)",
+            "data": json_data
+        }
