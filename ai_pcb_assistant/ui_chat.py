@@ -277,7 +277,7 @@ class AIChatDialog(wx.Dialog):
 
     def on_attach_pdf(self, event):
         try:
-            with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
+            with wx.FileDialog(self, "Chọn Datasheet (PDF/Ảnh)", wildcard="Tài liệu (*.pdf;*.png;*.jpg)|*.pdf;*.png;*.jpg",
                                style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
                 if fileDialog.ShowModal() == wx.ID_CANCEL:
                     return
@@ -295,6 +295,6 @@ class AIChatDialog(wx.Dialog):
                 
                 provider = self.ai_client.active_provider
                 if PROVIDERS.get(provider, {}).get("type") != "gemini":
-                    self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
+                    self.append_log("⚠️ Chú ý: Việc đọc tài liệu/hình ảnh đính kèm chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
         except Exception as e:
-            self.append_log(f"Lỗi hiển thị PDF: {str(e)}")
+            self.append_log(f"Lỗi hiển thị file: {str(e)}")

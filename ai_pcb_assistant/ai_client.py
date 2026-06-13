@@ -188,7 +188,7 @@ Cấu trúc yêu cầu:
             return {"error": f"API Key for {self.active_provider} is not set. Please configure it."}
             
         if pdf_path and provider_info["type"] != "gemini":
-            return {"error": f"Lỗi: Tính năng đọc Datasheet (PDF) hiện tại chỉ được hỗ trợ trên mạng Google Gemini. Vui lòng chọn Google Gemini hoặc gỡ file đính kèm."}
+            return {"error": f"Lỗi: Tính năng đọc Datasheet/Hình ảnh hiện tại chỉ được hỗ trợ trên mạng Google Gemini. Vui lòng chọn Google Gemini hoặc gỡ file đính kèm."}
 
         if provider_info["type"] == "gemini":
             return self._send_gemini(api_key, provider_info, system_prompt, data, pdf_path)
@@ -201,16 +201,22 @@ Cấu trúc yêu cầu:
         if pdf_path and os.path.exists(pdf_path):
             try:
                 with open(pdf_path, "rb") as f:
-                    pdf_bytes = f.read()
-                pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                    file_bytes = f.read()
+                file_b64 = base64.b64encode(file_bytes).decode('utf-8')
+                
+                mime_type = "application/pdf"
+                ext = pdf_path.lower()
+                if ext.endswith('.png'): mime_type = "image/png"
+                elif ext.endswith('.jpg') or ext.endswith('.jpeg'): mime_type = "image/jpeg"
+                
                 parts.append({
                     "inlineData": {
-                        "mimeType": "application/pdf",
-                        "data": pdf_b64
+                        "mimeType": mime_type,
+                        "data": file_b64
                     }
                 })
             except Exception as e:
-                return {"error": f"Không thể đọc file PDF: {str(e)}"}
+                return {"error": f"Không thể đọc file đính kèm: {str(e)}"}
 
         payload = {
             "contents": [{"parts": parts}],
