@@ -26,12 +26,19 @@ class BoardExtractor:
             y_mm = pos.y / 1e6
             layer = footprint.GetLayerName()
             
+            # Extract unique nets connected to this component
+            nets = set()
+            for pad in footprint.Pads():
+                net_name = pad.GetNetname()
+                if net_name:
+                    nets.add(net_name)
+            
             components.append({
                 "reference": ref,
                 "value": value,
                 "package": pkg,
-                "position": {"x_mm": round(x_mm, 3), "y_mm": round(y_mm, 3)},
-                "layer": layer
+                "layer": layer,
+                "nets": list(nets)
             })
             
         return components
