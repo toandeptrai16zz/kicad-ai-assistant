@@ -156,7 +156,7 @@ class BoardExtractor:
             return json.dumps({"circuit_components_and_nets": components}, indent=2)
         else:
             fallback = self.parse_schematic()
-            fallback["SYSTEM_WARNING"] = "Mạch PCB hiện đang trống (chưa Update PCB from Schematic). Hệ thống chỉ lấy được danh sách linh kiện thô, KHÔNG có dữ liệu kết nối dây (Nets). Hãy cảnh báo người dùng bấm phím F8 (Update PCB from Schematic) trên KiCad để AI có thể phân tích mạch chính xác 100%."
+            fallback["NOTE_TO_AI"] = "Chú ý nhỏ: Mạch PCB hiện tại đang trống (người dùng chưa F8 Update PCB). Do đó tôi chỉ thấy danh sách linh kiện thô mà không có thông tin đường nối dây (Nets). Hãy nhẹ nhàng nhắc người dùng rằng nếu muốn phân tích các kết nối dây chính xác 100% thì nên nhấn F8 trên KiCad, còn nếu chỉ cần tư vấn chọn linh kiện thì không bắt buộc."
             return json.dumps({"schematic_summary": fallback}, indent=2)
 
     def to_json_pcb(self):
