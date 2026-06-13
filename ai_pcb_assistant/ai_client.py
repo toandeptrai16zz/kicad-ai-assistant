@@ -263,12 +263,28 @@ Cấu trúc yêu cầu:
                     return self._parse_json_response(text_response)
                     
             except urllib.error.HTTPError as e:
+                error_msg = e.read().decode('utf-8')
+                
                 # Retry on 429 Too Many Requests, or 5xx Server Errors
                 if e.code in [429, 500, 502, 503, 504] and attempt < max_retries - 1:
-                    time.sleep(retry_delay)
+                    # Smart delay parsing for Google Gemini Rate Limits
+                    dynamic_delay = retry_delay
+                    if e.code == 429:
+                        try:
+                            error_data = json.loads(error_msg)
+                            for detail in error_data.get('error', {}).get('details', []):
+                                if detail.get('@type') == 'type.googleapis.com/google.rpc.RetryInfo':
+                                    delay_str = detail.get('retryDelay', '0s')
+                                    delay_sec = int(float(re.search(r'\d+', delay_str).group()))
+                                    if 0 < delay_sec < 60:
+                                        dynamic_delay = delay_sec + 1
+                        except Exception:
+                            pass
+                            
+                    time.sleep(dynamic_delay)
                     retry_delay *= 2
                     continue
-                error_msg = e.read().decode('utf-8')
+                    
                 return {"error": f"API HTTP Error {e.code}: {e.reason}\n{error_msg}"}
             except Exception as e:
                 # Catch timeout, URLError, connection reset, etc.
