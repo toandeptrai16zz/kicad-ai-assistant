@@ -53,8 +53,34 @@ class AIChatDialog(wx.Dialog):
         self.chat_log = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2)
         vbox.Add(self.chat_log, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)
         
-        # User Input
+        # User Input & Attachment Area
+        input_area_vbox = wx.BoxSizer(wx.VERTICAL)
+        
+        # Attachment Chip (Hidden by default)
+        self.attachment_panel = wx.Panel(panel)
+        self.attachment_panel.SetBackgroundColour(wx.Colour(60, 60, 60))
+        self.attachment_panel.Hide()
+        
+        attach_hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.lbl_attachment = wx.StaticText(self.attachment_panel, label="📄 file.pdf")
+        self.lbl_attachment.SetForegroundColour(wx.Colour(220, 220, 220))
+        
+        btn_remove_attach = wx.Button(self.attachment_panel, label="✕", size=(25, 25))
+        btn_remove_attach.Bind(wx.EVT_BUTTON, self.on_remove_attachment)
+        
+        attach_hbox.Add(self.lbl_attachment, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT | wx.LEFT | wx.TOP | wx.BOTTOM, border=5)
+        attach_hbox.Add(btn_remove_attach, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
+        
+        self.attachment_panel.SetSizer(attach_hbox)
+        input_area_vbox.Add(self.attachment_panel, flag=wx.BOTTOM, border=5)
+        
+        # Input row
         hbox_input = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.btn_attach_pdf = wx.Button(panel, label="📎", size=(35, -1))
+        self.btn_attach_pdf.Bind(wx.EVT_BUTTON, self.on_attach_pdf)
+        hbox_input.Add(self.btn_attach_pdf, flag=wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, border=5)
+        
         self.chat_input = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
         self.chat_input.Bind(wx.EVT_TEXT_ENTER, self.on_send)
         hbox_input.Add(self.chat_input, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
@@ -63,7 +89,9 @@ class AIChatDialog(wx.Dialog):
         btn_send.Bind(wx.EVT_BUTTON, self.on_send)
         hbox_input.Add(btn_send, flag=wx.ALIGN_CENTER_VERTICAL)
         
-        vbox.Add(hbox_input, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)
+        input_area_vbox.Add(hbox_input, flag=wx.EXPAND)
+        
+        vbox.Add(input_area_vbox, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)
         
         # Action Buttons
         hbox_actions = wx.BoxSizer(wx.HORIZONTAL)
@@ -80,9 +108,7 @@ class AIChatDialog(wx.Dialog):
         btn_analyze_sel.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("selection"))
         hbox_actions.Add(btn_analyze_sel, flag=wx.RIGHT, border=5)
         
-        self.btn_attach_pdf = wx.Button(panel, label="📎 Đính kèm PDF")
-        self.btn_attach_pdf.Bind(wx.EVT_BUTTON, self.on_attach_pdf)
-        hbox_actions.Add(self.btn_attach_pdf, flag=wx.RIGHT, border=5)
+        # (Moved PDF button next to chat input)
         
         btn_auto_apply = wx.Button(panel, label="Tự động áp dụng (Auto Fix)")
         btn_auto_apply.Bind(wx.EVT_BUTTON, self.on_auto_apply)
@@ -227,23 +253,27 @@ class AIChatDialog(wx.Dialog):
         wx.CallAfter(pcbnew.Refresh)
         self.append_log("\n--- Đã áp dụng tự động thành công ---")
 
-    def on_attach_pdf(self, event):
-        if self.attached_pdf:
-            # If already attached, remove it
-            self.attached_pdf = None
-            self.btn_attach_pdf.SetLabel("📎 Đính kèm PDF")
-            self.append_log("Đã gỡ bỏ file PDF đính kèm.")
-        else:
-            with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
-                               style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
-                if fileDialog.ShowModal() == wx.ID_CANCEL:
-                    return     # User changed their mind
+    def on_remove_attachment(self, event=None):
+        self.attached_pdf = None
+        self.attachment_panel.Hide()
+        self.attachment_panel.GetParent().Layout()
+        self.append_log("Đã gỡ bỏ file PDF đính kèm.")
 
-                self.attached_pdf = fileDialog.GetPath()
-                filename = os.path.basename(self.attached_pdf)
-                self.btn_attach_pdf.SetLabel(f"❌ Gỡ bỏ PDF ({filename})")
-                self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần phân tích tiếp theo (Chỉ hỗ trợ Gemini).")
-                
-                provider = self.ai_client.active_provider
-                if PROVIDERS.get(provider, {}).get("type") != "gemini":
-                    self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
+    def on_attach_pdf(self, event):
+        with wx.FileDialog(self, "Chọn Datasheet (PDF)", wildcard="PDF files (*.pdf)|*.pdf",
+                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            self.attached_pdf = fileDialog.GetPath()
+            filename = os.path.basename(self.attached_pdf)
+            
+            self.lbl_attachment.SetLabel(f"📄 {filename}")
+            self.attachment_panel.Show()
+            self.attachment_panel.GetParent().Layout()
+            
+            self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần tương tác tiếp theo.")
+            
+            provider = self.ai_client.active_provider
+            if PROVIDERS.get(provider, {}).get("type") != "gemini":
+                self.append_log("⚠️ Chú ý: Bạn đang không sử dụng Google Gemini. Việc đọc PDF chỉ được hỗ trợ trên Gemini. Vui lòng đổi mạng ở ô phía trên.")
