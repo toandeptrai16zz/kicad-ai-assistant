@@ -8,9 +8,9 @@ CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
 
 PROVIDERS = {
     "Google Gemini": {
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent",
         "type": "gemini",
-        "model": "gemini-1.5-flash"
+        "model": "gemini-1.5-pro-latest"
     },
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
