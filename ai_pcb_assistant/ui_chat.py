@@ -256,7 +256,8 @@ class AIChatDialog(wx.Dialog):
     def on_remove_attachment(self, event=None):
         self.attached_pdf = None
         self.attachment_panel.Hide()
-        self.attachment_panel.GetParent().Layout()
+        self.Layout()
+        self.Refresh()
         self.append_log("Đã gỡ bỏ file PDF đính kèm.")
 
     def on_attach_pdf(self, event):
@@ -270,7 +271,8 @@ class AIChatDialog(wx.Dialog):
             
             self.lbl_attachment.SetLabel(f"📄 {filename}")
             self.attachment_panel.Show()
-            self.attachment_panel.GetParent().Layout()
+            self.Layout()
+            self.Refresh()
             
             self.append_log(f"Đã đính kèm file: {filename}. AI sẽ đọc file này trong lần tương tác tiếp theo.")
             
