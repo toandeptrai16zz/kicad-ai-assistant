@@ -150,8 +150,12 @@ class BoardExtractor:
         return sch_summary
 
     def to_json_schematic(self):
-        """Return only the schematic data as JSON."""
-        return json.dumps({"schematic_summary": self.parse_schematic()}, indent=2)
+        """Return the schematic data. Prefer PCB components (which have accurate Net connections) if available."""
+        components = self.get_components()
+        if components:
+            return json.dumps({"circuit_components_and_nets": components}, indent=2)
+        else:
+            return json.dumps({"schematic_summary": self.parse_schematic()}, indent=2)
 
     def to_json_pcb(self):
         """Return only the PCB data as JSON."""
