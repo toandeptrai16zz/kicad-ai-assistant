@@ -23,7 +23,7 @@ PROVIDERS = {
     "Groq": {
         "url": "https://api.groq.com/openai/v1/chat/completions",
         "type": "openai",
-        "model": "llama3-70b-8192"
+        "model": "llama-3.3-70b-versatile"
     },
     "OpenAI": {
         "url": "https://api.openai.com/v1/chat/completions",
