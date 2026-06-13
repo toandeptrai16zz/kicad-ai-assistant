@@ -106,6 +106,24 @@ Cấu trúc yêu cầu:
 ```
 """
 
+        self.chat_prompt = """
+Bạn là một trợ lý AI phân tích phần cứng thông minh.
+Người dùng đang hỏi bạn một câu hỏi tự do. Có thể họ đính kèm thông tin về một linh kiện họ đang chọn trên phần mềm thiết kế, hoặc đính kèm một file PDF Datasheet để bạn đọc.
+Nhiệm vụ của bạn:
+1. Đọc kỹ câu hỏi của người dùng.
+2. Đối chiếu với thông tin linh kiện đang chọn (nếu có) và file PDF đính kèm (nếu có).
+3. Trả lời câu hỏi một cách chi tiết, chính xác, sử dụng ngôn ngữ Markdown rõ ràng.
+4. QUAN TRỌNG: KHÔNG sử dụng định dạng toán học LaTeX (như $10k\\Omega$ hoặc $\\mu F$). Hãy viết đơn vị bằng văn bản thuần túy (VD: 10k ohm, 2.2uF, 10uF).
+5. Ở DƯỚI CÙNG của câu trả lời, bạn BẮT BUỘC đính kèm khối mã JSON rỗng (chỉ để hệ thống không bị lỗi parser).
+
+Cấu trúc yêu cầu:
+(Câu trả lời Markdown)
+
+```json
+{}
+```
+"""
+
     def _load_config(self):
         default_config = {
             "active_provider": "Google Gemini",
@@ -155,6 +173,9 @@ Cấu trúc yêu cầu:
         
     def analyze_selection(self, json_data, pdf_path=None):
         return self._send_request(self.interactive_prompt, json_data, pdf_path)
+
+    def analyze_chat(self, json_data, pdf_path=None):
+        return self._send_request(self.chat_prompt, json_data, pdf_path)
 
     def _send_request(self, system_prompt, data, pdf_path=None):
         provider_info = PROVIDERS.get(self.active_provider)

@@ -124,18 +124,18 @@ class AIChatDialog(wx.Dialog):
         self.append_log(f"\nBạn: {user_text}")
         self.chat_input.Clear()
         
-        if "schematic" in user_text.lower():
+        if user_text.lower() == "phân tích schematic":
             self.on_analyze_ai("schematic")
-        elif "pcb" in user_text.lower():
+        elif user_text.lower() == "phân tích pcb":
             self.on_analyze_ai("pcb")
-        elif "chọn" in user_text.lower() or "selection" in user_text.lower():
+        elif user_text.lower() == "hỏi mục đang chọn":
             self.on_analyze_ai("selection")
-        elif "auto" in user_text.lower() or "tự động" in user_text.lower():
+        elif user_text.lower() in ["auto", "tự động"]:
             self.on_auto_apply(None)
         else:
-            self.append_log("AI: Vui lòng bấm các nút phân tích, hoặc gõ 'phân tích pcb', 'phân tích schematic', 'hỏi mục đang chọn', 'auto'.")
+            self.on_analyze_ai("chat", custom_text=user_text)
 
-    def on_analyze_ai(self, mode):
+    def on_analyze_ai(self, mode, custom_text=None):
         if not self.board:
             self.append_log("\nLỗi: Không tìm thấy Board.")
             return
@@ -153,12 +153,23 @@ class AIChatDialog(wx.Dialog):
         elif mode == "pcb":
             self.append_log(f"\n--- Bắt đầu trích xuất dữ liệu PCB ---")
             json_data = self.extractor.to_json_pcb()
-        else:
+        elif mode == "selection":
             self.append_log(f"\n--- Bắt đầu phân tích Mục đang chọn ---")
             json_data = self.extractor.to_json_selection()
             if "error" in json_data and "No items selected" in json_data:
                 self.append_log(f"\nLỗi: Không có mục nào được chọn. Hãy click chuột chọn một linh kiện hoặc đường mạch trên màn hình KiCad rồi thử lại.")
                 return
+        elif mode == "chat":
+            json_data = {"user_question": custom_text}
+            selection_data = self.extractor.to_json_selection()
+            if isinstance(selection_data, str):
+                try:
+                    parsed_sel = json.loads(selection_data)
+                    if "error" not in parsed_sel:
+                        json_data["context_selected_item"] = parsed_sel
+                except Exception:
+                    pass
+            json_data = json.dumps(json_data, indent=2)
             
         if self.attached_pdf:
             self.append_log(f"Đã đính kèm Datasheet: {os.path.basename(self.attached_pdf)}")
@@ -172,8 +183,10 @@ class AIChatDialog(wx.Dialog):
             result = self.ai_client.analyze_schematic(json_data, pdf_path)
         elif mode == "pcb":
             result = self.ai_client.analyze_pcb(json_data, pdf_path)
-        else:
+        elif mode == "selection":
             result = self.ai_client.analyze_selection(json_data, pdf_path)
+        elif mode == "chat":
+            result = self.ai_client.analyze_chat(json_data, pdf_path)
             
         if "error" in result:
             self.append_log(f"\nLỗi từ AI: {result['error']}")
