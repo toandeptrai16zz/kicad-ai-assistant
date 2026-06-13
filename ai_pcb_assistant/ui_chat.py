@@ -97,25 +97,31 @@ class AIChatDialog(wx.Dialog):
         # Action Buttons
         hbox_actions = wx.BoxSizer(wx.HORIZONTAL)
         
-        btn_analyze_sch = wx.Button(panel, label="Phân tích Schematic")
-        btn_analyze_sch.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("schematic"))
-        hbox_actions.Add(btn_analyze_sch, flag=wx.RIGHT, border=5)
-
-        btn_analyze_pcb = wx.Button(panel, label="Phân tích PCB")
-        btn_analyze_pcb.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("pcb"))
-        hbox_actions.Add(btn_analyze_pcb, flag=wx.RIGHT, border=5)
+        btn_hbox = hbox_actions
         
-        btn_analyze_sel = wx.Button(panel, label="Hỏi mục đang chọn")
-        btn_analyze_sel.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("selection"))
-        hbox_actions.Add(btn_analyze_sel, flag=wx.RIGHT, border=5)
+        btn_sch = wx.Button(panel, label="Phân tích Schematic")
+        btn_sch.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("schematic"))
         
-        # (Moved PDF button next to chat input)
+        btn_pcb = wx.Button(panel, label="Phân tích PCB")
+        btn_pcb.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("pcb"))
         
-        btn_auto_apply = wx.Button(panel, label="Tự động áp dụng (Auto Fix)")
-        btn_auto_apply.Bind(wx.EVT_BUTTON, self.on_auto_apply)
-        hbox_actions.Add(btn_auto_apply, flag=wx.RIGHT, border=5)
+        btn_selection = wx.Button(panel, label="Hỏi mục đang chọn")
+        btn_selection.Bind(wx.EVT_BUTTON, lambda e: self.on_analyze_ai("selection"))
         
-        vbox.Add(hbox_actions, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
+        btn_auto = wx.Button(panel, label="Tự động áp dụng (Auto Fix)")
+        btn_auto.Bind(wx.EVT_BUTTON, self.on_auto_apply)
+        
+        btn_cluster = wx.Button(panel, label="Auto-Cluster")
+        btn_cluster.Bind(wx.EVT_BUTTON, self.on_auto_cluster)
+        btn_cluster.SetToolTip("Gom cụm linh kiện dựa theo Schematic")
+        
+        btn_hbox.Add(btn_sch, proportion=1, flag=wx.RIGHT, border=5)
+        btn_hbox.Add(btn_pcb, proportion=1, flag=wx.RIGHT, border=5)
+        btn_hbox.Add(btn_selection, proportion=1, flag=wx.RIGHT, border=5)
+        btn_hbox.Add(btn_auto, proportion=1, flag=wx.RIGHT, border=5)
+        btn_hbox.Add(btn_cluster, proportion=1)
+        
+        vbox.Add(hbox_actions, flag=wx.ALIGN_CENTER | wx.BOTTOM | wx.EXPAND, border=10)
 
         panel.SetSizer(vbox)
         
@@ -253,6 +259,11 @@ class AIChatDialog(wx.Dialog):
             
         wx.CallAfter(pcbnew.Refresh)
         self.append_log("\n--- Đã áp dụng tự động thành công ---")
+
+    def on_auto_cluster(self, event):
+        self.append_log("\n--- Bắt đầu Tự động gom cụm linh kiện (Auto-Cluster) ---")
+        msg = self.automator.auto_cluster_footprints()
+        self.append_log(f"Hệ thống: {msg}")
 
     def on_remove_attachment(self, event=None):
         try:

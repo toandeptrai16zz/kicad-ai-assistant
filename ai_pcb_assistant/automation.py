@@ -81,3 +81,64 @@ class BoardAutomator:
         if warnings:
             return "\n".join(warnings)
         return "Kiểm tra DRC AI hoàn tất, không tìm thấy linh kiện lỗi trên mạch."
+
+    def auto_cluster_footprints(self):
+        """Auto-place footprints on PCB based on their layout in Schematic (Clustering)."""
+        if not self.board:
+            return "Không tìm thấy board."
+            
+        pcb_path = self.board.GetFileName()
+        if not pcb_path: 
+            return "Lỗi: Mạch chưa được lưu (Board is not saved)."
+            
+        sch_path = pcb_path.replace(".kicad_pcb", ".kicad_sch")
+        import os, re
+        if not os.path.exists(sch_path):
+            return f"Lỗi: Không tìm thấy file Schematic tại {sch_path}"
+            
+        try:
+            with open(sch_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            symbol_blocks = re.findall(r'\(symbol\s(.*?)(?=\(symbol\s|\Z)', content, re.DOTALL)
+            mapping = {}
+            for block in symbol_blocks:
+                if '(uuid' not in block:
+                    continue
+                ref_match = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', block)
+                if not ref_match:
+                    continue
+                ref = ref_match.group(1)
+                
+                at_match = re.search(r'\(at\s+([0-9.-]+)\s+([0-9.-]+)', block)
+                if at_match:
+                    x = float(at_match.group(1))
+                    y = float(at_match.group(2))
+                    mapping[ref] = (x, y)
+                    
+            if not mapping:
+                return "Không trích xuất được tọa độ từ Schematic."
+                
+            moved_count = 0
+            SCALE = 0.5
+            OFFSET_X = -50.0 
+            OFFSET_Y = -50.0
+            
+            for footprint in self.board.GetFootprints():
+                ref = footprint.GetReference()
+                if ref in mapping:
+                    sch_x, sch_y = mapping[ref]
+                    pcb_x_mm = sch_x * SCALE + OFFSET_X
+                    pcb_y_mm = sch_y * SCALE + OFFSET_Y
+                    
+                    pos_x = int(pcb_x_mm * 1000000)
+                    pos_y = int(pcb_y_mm * 1000000)
+                    
+                    footprint.SetPosition(pcbnew.wxPoint(pos_x, pos_y))
+                    moved_count += 1
+                    
+            pcbnew.Refresh()
+            return f"Thành công! Đã tự động gom cụm {moved_count} linh kiện theo bản vẽ Schematic."
+            
+        except Exception as e:
+            return f"Lỗi Auto-Cluster: {str(e)}"
